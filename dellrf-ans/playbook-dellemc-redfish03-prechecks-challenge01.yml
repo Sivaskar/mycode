@@ -1,0 +1,42 @@
+---
+- name: PowerEdge Prechecks Playbook
+  hosts: redfish_apis
+  connection: local
+  gather_facts: false
+
+  tasks:
+    # When connecting to a redfish interface don't use gather_facts
+    # community.general.redfish_info is a possible replacement
+    - name: Get default inventory information
+      community.general.redfish_info:
+        baseuri: "{{ baseuri }}"
+        username: "{{ username }}"
+        password: "{{ password }}"
+      register: results
+
+    # Precheck 1: Assert that hostname is set
+    - name: Assert that hostname is set
+      assert:
+        that:
+          - results.redfish_facts.system.entries[0][1].HostName is defined
+        msg: "Hostname is not set. Please configure the hostname before proceeding."
+
+    # Precheck 2: Assert BIOS version format
+    - name: Assert BIOS version format
+      assert:
+        that:
+          - results.redfish_facts.system.entries[0][1].BiosVersion | regex_search('^\d+\.\d+\.\d+$')
+        msg: "BIOS version does not match the expected format (x.y.z)."
+
+    # Existing prechecks (unchanged)
+    - name: Assert that an expected condition is true (this is a chicago asset)
+      assert:
+        that:
+          - "'Chicago' in results.redfish_facts.system.entries[0][1].AssetTag"
+
+    - name: Ensure the correct model is being used
+      assert:
+        that:
+          - results.redfish_facts.system.entries[0][1].Model == "3500"
+        msg: "This does not appear to be a model 3500. Aborting."
+
