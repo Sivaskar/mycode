@@ -1,0 +1,43 @@
+---
+- name: PRECHECKING - Check Health of iDRAC
+  block:
+
+    - name: Show status of the Lifecycle Controller
+      dellemc.openmanage.idrac_lifecycle_controller_status_info:
+        idrac_ip: "{{ idrac_credentials.idrac_ip }}"
+        idrac_user: "{{ idrac_credentials.idrac_user }}"
+        idrac_password: "{{ idrac_credentials.idrac_password }}"
+        validate_certs: False
+      register: results
+
+    - name: Show us what you learned
+      debug:
+        var: results
+        verbosity: 1
+
+    # Start the Prechecks #
+    - name: ASSERT iDRAC is healthy
+      assert:
+        that: results.lc_status_info.LCReady == true
+        success_msg: iDRAC is healthy
+        fail_msg: iDRAC is unhealthy
+
+    - name: FAIL if iDRAC is not ready
+      fail:
+        msg: "iDRAC is unhealthy"
+      when: results.lc_status_info.LCStatus != "Ready"
+
+  rescue:
+
+    - name: Collect Logs when iDRAC is unhealthy
+      dellemc.openmanage.idrac_lifecycle_controller_logs:
+        idrac_ip: "{{ idrac_credentials.idrac_ip }}"
+        idrac_user: "{{ idrac_credentials.idrac_user }}"
+        idrac_password: "{{ idrac_credentials.idrac_password }}"
+        validate_certs: False
+        share_name: "/tmp/export_lc"
+
+    - name: PRECHECK FAIL - Exit the playbook
+      fail:
+        msg: "Precheck failed. Exiting the playbook"
+

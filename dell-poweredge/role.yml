@@ -1,0 +1,6 @@
+---
+- name: Apply poweredge-status-logs role to localhost
+  hosts: localhost
+  roles:
+    - poweredge-status-logs
+
